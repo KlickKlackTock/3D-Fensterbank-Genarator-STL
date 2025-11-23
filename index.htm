@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Print Studio - Fensterbank</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #18181b; color: #e4e4e7; }
+        canvas { display: block; }
+        
+        /* Custom Range Slider (Green Style) */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px; width: 16px;
+            border-radius: 50%;
+            background: #4ade80; /* Green-400 */
+            cursor: pointer;
+            margin-top: -6px; 
+            border: 2px solid #18181b;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px;
+            cursor: pointer;
+            background: #3f3f46; /* Zinc-700 */
+            border-radius: 2px;
+        }
+        
+        /* Number Input Styling to look like Slicer UI */
+        input[type=number] {
+            background-color: #27272a; /* Zinc-800 */
+            border: 1px solid #3f3f46;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            width: 80px;
+            text-align: right;
+        }
+        input[type=number]:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        /* Remove arrows from number input */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        /* Color Picker Styling */
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            padding: 0;
+            overflow: hidden;
+            cursor: pointer;
+            background: none;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        input[type="color"]::-webkit-color-swatch {
+            border: 2px solid #3f3f46;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen font-sans">
+
+    <!-- Header -->
+    <header class="bg-zinc-900 border-b border-zinc-800 p-4 shadow-md flex justify-between items-center z-10">
+        <div class="flex items-center gap-3">
+            <div class="bg-green-500/10 p-2 rounded-lg">
+                <svg class="text-green-500 w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold text-white tracking-wide">3D Print Studio</h1>
+                <p class="text-xs text-zinc-500">Fensterbank Generator</p>
+            </div>
+        </div>
+        <button id="downloadBtn" class="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-md font-semibold text-sm flex items-center gap-2 transition-all shadow-lg hover:shadow-green-500/20">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            STL Exportieren
+        </button>
+    </header>
+
+    <div class="flex flex-col md:flex-row flex-1 overflow-hidden">
+        
+        <!-- Sidebar -->
+        <aside class="w-full md:w-80 bg-zinc-900 border-r border-zinc-800 p-6 overflow-y-auto flex flex-col gap-6 z-10">
+            
+            <!-- Parameters -->
+            <div>
+                <h2 class="text-xs uppercase tracking-wider text-green-500 font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                    Geometrie
+                </h2>
+                
+                <div class="space-y-6">
+                    <!-- Breite -->
+                    <div class="group">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12H3"/><path d="M17 8l4 4-4 4"/><path d="M7 8l-4 4 4 4"/></svg>
+                                <label class="text-xs font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors">Breite (mm)</label>
+                            </div>
+                            <input type="number" id="num-width" value="187.5" step="0.1">
+                        </div>
+                        <input type="range" id="width" min="10" max="500" step="0.5" value="187.5" class="w-full accent-green-500">
+                    </div>
+
+                    <!-- Höhe -->
+                    <div class="group">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7l4-4 4 4"/><path d="M8 17l4 4 4-4"/></svg>
+                                <label class="text-xs font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors">Höhe (mm)</label>
+                            </div>
+                            <input type="number" id="num-height" value="75" step="1">
+                        </div>
+                        <input type="range" id="height" min="10" max="200" step="1" value="75" class="w-full accent-green-500">
+                    </div>
+
+                    <!-- Tiefe -->
+                    <div class="group">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 2 20 20"/><path d="m19 16 3 6-6-3"/><path d="m5 8-3-6 6 3"/></svg>
+                                <label class="text-xs font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors">Tiefe (mm)</label>
+                            </div>
+                            <input type="number" id="num-depth" value="75" step="1">
+                        </div>
+                        <input type="range" id="depth" min="10" max="200" step="1" value="75" class="w-full accent-green-500">
+                    </div>
+
+                    <!-- Wandstärke -->
+                    <div class="group">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+                                <label class="text-xs font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors">Wandstärke (mm)</label>
+                            </div>
+                            <input type="number" id="num-thickness" value="5" step="0.5">
+                        </div>
+                        <input type="range" id="thickness" min="2" max="20" step="0.5" value="5" class="w-full accent-green-500">
+                    </div>
+                    
+                    <!-- Anzahl Beine -->
+                    <div class="group">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><path d="M18 3v18"/><path d="M6 3h12"/><path d="M6 21h12"/></svg>
+                                <label class="text-xs font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors">Stützen</label>
+                            </div>
+                            <input type="number" id="num-numLegs" value="3" step="1">
+                        </div>
+                        <input type="range" id="numLegs" min="2" max="10" step="1" value="3" class="w-full accent-green-500">
+                    </div>
+
+                    <!-- Radius -->
+                    <div class="pt-6 border-t border-zinc-800 group">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h5a5 5 0 0 1 5 5v5"/></svg>
+                                <label class="text-xs font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors">Innen-Rundung (mm)</label>
+                            </div>
+                            <input type="number" id="num-radius" value="2" step="0.1" class="border-green-900 focus:border-green-500">
+                        </div>
+                        <input type="range" id="radius" min="0" max="20" step="0.1" value="2" class="w-full accent-green-500">
+                        <p class="text-[10px] text-zinc-500 mt-2">Rundet die Raumseite von Platte und Stützen ab. Fensterseite bleibt flach.</p>
+                    </div>
+
+                    <!-- Farbe Picker -->
+                    <div class="pt-4 border-t border-zinc-800 group flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><path d="M17.5 12.5c0 2.5-2.5 4.5-5 4.5s-5-2-5-4.5S12.5 2.5 17.5 12.5Z"/><path d="M17.5 12.5S22 10 22 6.5c0-2.5-2-4.5-4.5-4.5S13 4 13 6.5"/></svg>
+                            <label class="text-xs font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors">Ansicht Farbe</label>
+                        </div>
+                        <input type="color" id="colorPicker" value="#f97316" title="Farbe wählen">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Area -->
+            <div class="mt-auto pt-6 border-t border-zinc-800">
+                 <div class="flex justify-between items-center mb-4">
+                     <button id="resetBtn" class="text-xs text-zinc-500 hover:text-green-400 flex items-center gap-1 transition-colors">
+                        <svg class="w-3 h-3 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        Reset Defaults
+                     </button>
+                 </div>
+                 
+                 <!-- Project Info in 3 Grüntönen -->
+                 <div class="bg-green-950/20 border border-green-900/40 rounded p-3">
+                    <p class="text-[10px] text-green-600 uppercase tracking-widest font-bold mb-2">Project Info</p>
+                    
+                    <div class="text-xs text-green-300 flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-2 text-green-500">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span>Erstellt von:</span>
+                        </div>
+                        <span class="font-mono text-green-100">Tomas Menzel</span>
+                    </div>
+
+                    <div class="text-xs text-green-300 flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-2 text-green-500">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <span>Datum:</span>
+                        </div>
+                        <span class="font-mono text-green-100">23.11.2025</span>
+                    </div>
+
+                    <div class="text-xs text-green-300 flex justify-between items-center border-t border-green-900/40 pt-1.5 mt-1">
+                         <div class="flex items-center gap-2 text-green-500">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                            <span>Version:</span>
+                        </div>
+                        <span class="font-mono text-green-100">0.1</span>
+                    </div>
+                 </div>
+            </div>
+        </aside>
+
+        <!-- 3D Viewport -->
+        <main id="canvas-container" class="flex-1 bg-zinc-950 relative h-2/3 md:h-full">
+            <div class="absolute top-4 left-4 z-0 bg-zinc-900/80 backdrop-blur px-3 py-1.5 rounded border border-zinc-800 text-[10px] text-zinc-400 pointer-events-none select-none flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse"></span>
+                <span>L: Drehen • R: Verschieben • Scroll: Zoom</span>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+
+        // --- State ---
+        const state = {
+            width: 187.5,
+            height: 75,
+            depth: 75,
+            thickness: 5,
+            radius: 2,
+            numLegs: 3,
+            color: '#f97316' // Standard Orange
+        };
+
+        // --- Scene Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#09090b'); // Very dark zinc
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 2000);
+        camera.position.set(200, 200, 200);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
+
+        // --- Lights ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(100, 200, 100);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0x4ade80, 0.2); // Slight green fill
+        fillLight.position.set(-100, 50, -100);
+        scene.add(fillLight);
+
+        // Dark Grid
+        const grid = new THREE.GridHelper(500, 50, '#27272a', '#18181b');
+        scene.add(grid);
+
+        // --- Geometry Logic ---
+        const group = new THREE.Group();
+        scene.add(group);
+
+        // Material with dynamic color
+        const material = new THREE.MeshStandardMaterial({ 
+            color: state.color, 
+            roughness: 0.6,
+            metalness: 0.1,
+            flatShading: false
+        });
+
+        // Meshes holder
+        const meshes = {
+            top: new THREE.Mesh(), 
+            legs: [] // Dynamic array for legs
+        };
+
+        meshes.top.castShadow = true;
+        meshes.top.receiveShadow = true;
+        meshes.top.material = material;
+        group.add(meshes.top);
+
+
+        // Helper: Create Extruded Shape for Top Plate (Side Profile in Z-Y plane)
+        function createTopProfile(depth, thickness, radius) {
+            const shape = new THREE.Shape();
+            // 0,0 is Back-Bottom of the plate
+            shape.moveTo(0, 0);
+            shape.lineTo(0, thickness); // Back straight up
+            shape.lineTo(depth - radius, thickness); // Top forward to curve start
+            
+            if (radius > 0) {
+                // Front Nose Rounding
+                shape.quadraticCurveTo(depth, thickness, depth, thickness - radius);
+                shape.lineTo(depth, radius);
+                shape.quadraticCurveTo(depth, 0, depth - radius, 0);
+            } else {
+                shape.lineTo(depth, thickness);
+                shape.lineTo(depth, 0);
+            }
+            
+            shape.lineTo(0, 0); // Close
+            return shape;
+        }
+
+        // Helper: Create Extruded Shape for Legs (Side Profile in Z-Y plane)
+        function createLegProfile(depth, height, radius) {
+            const shape = new THREE.Shape();
+            // 0,0 is Back-Bottom of the leg
+            shape.moveTo(0, 0);
+            shape.lineTo(0, height); // Back straight up
+            shape.lineTo(depth - radius, height); // Top forward to curve start
+            
+            if (radius > 0) {
+                // Front Rounding (matches top plate's upper curve)
+                shape.quadraticCurveTo(depth, height, depth, height - radius);
+            } else {
+                shape.lineTo(depth, height);
+            }
+            
+            shape.lineTo(depth, 0); // Straight down to front bottom (stands flat)
+            shape.lineTo(0, 0); // Close back to origin
+            return shape;
+        }
+
+        function updateModel() {
+            const { width, height, depth, thickness, radius, numLegs } = state;
+            const supportHeight = height - thickness;
+            const safeRadius = Math.min(radius, thickness / 2, depth / 2);
+
+            // --- 1. Top Plate ---
+            meshes.top.geometry.dispose();
+            const topShape = createTopProfile(depth, thickness, safeRadius);
+            const topGeo = new THREE.ExtrudeGeometry(topShape, {
+                steps: 1,
+                depth: width, 
+                bevelEnabled: false
+            });
+            
+            topGeo.rotateY(-Math.PI / 2);
+            topGeo.translate(width/2, height - thickness, -depth/2);
+
+            meshes.top.geometry = topGeo;
+
+            // --- 2. Dynamic Legs ---
+            meshes.legs.forEach(mesh => {
+                group.remove(mesh);
+                mesh.geometry.dispose();
+            });
+            meshes.legs = [];
+
+            if (numLegs >= 2) {
+                const legShape = createLegProfile(depth, supportHeight, safeRadius);
+                const legGeoBase = new THREE.ExtrudeGeometry(legShape, {
+                    steps: 1,
+                    depth: thickness, 
+                    bevelEnabled: false
+                });
+
+                legGeoBase.rotateY(-Math.PI / 2);
+                legGeoBase.translate(thickness/2, 0, -depth/2);
+
+                const startX = -width / 2 + thickness / 2;
+                const stepX = numLegs > 1 ? (width - thickness) / (numLegs - 1) : 0;
+
+                for (let i = 0; i < numLegs; i++) {
+                    const posX = startX + i * stepX;
+                    const legGeo = legGeoBase.clone();
+                    legGeo.translate(posX, 0, 0);
+
+                    const mesh = new THREE.Mesh(legGeo, material);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    group.add(mesh);
+                    meshes.legs.push(mesh);
+                }
+            }
+            
+            group.position.y = -height / 2;
+            grid.position.y = -height / 2;
+        }
+
+        // Init
+        updateModel();
+
+        // --- Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- UI Handling ---
+        const inputs = [
+            'width', 'height', 'depth', 'thickness', 'radius', 'numLegs'
+        ];
+
+        function updateUI(id, val) {
+            // Update Slider
+            const slider = document.getElementById(id);
+            if (slider) slider.value = val;
+            
+            // Update Number Input
+            const numInput = document.getElementById('num-' + id);
+            if (numInput) numInput.value = val;
+            
+            state[id] = parseFloat(val);
+            updateModel();
+        }
+
+        inputs.forEach(id => {
+            const slider = document.getElementById(id);
+            const numInput = document.getElementById('num-' + id);
+
+            // Slider Change
+            slider.addEventListener('input', (e) => {
+                updateUI(id, e.target.value);
+            });
+            slider.addEventListener('mousedown', () => controls.autoRotate = false);
+
+            // Number Input Change
+            numInput.addEventListener('input', (e) => {
+                // Allow empty string for typing
+                if(e.target.value === '') return;
+                updateUI(id, e.target.value);
+            });
+            numInput.addEventListener('focus', () => controls.autoRotate = false);
+        });
+
+        // --- Color Picker Handling ---
+        const colorPicker = document.getElementById('colorPicker');
+        colorPicker.addEventListener('input', (e) => {
+            state.color = e.target.value;
+            material.color.set(state.color);
+        });
+
+        window.addEventListener('resize', () => {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            updateUI('width', 187.5);
+            updateUI('height', 75);
+            updateUI('depth', 75);
+            updateUI('thickness', 5);
+            updateUI('radius', 2);
+            updateUI('numLegs', 3);
+            
+            // Reset Color
+            state.color = '#f97316';
+            material.color.set(state.color);
+            colorPicker.value = '#f97316';
+        });
+
+        // --- Export ---
+        const exporter = new STLExporter();
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const result = exporter.parse(group, { binary: true });
+            const blob = new Blob([result], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `fensterbank_profil_${state.width}x${state.height}_${state.numLegs}legs.stl`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+    </script>
+</body>
+</html>
