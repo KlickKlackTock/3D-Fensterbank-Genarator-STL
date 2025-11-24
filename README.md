@@ -27,3 +27,5 @@ Three.js für 3D-Rendering & STL-Export
 Tailwind CSS für das Styling
 
 Version 0.1 | Erstellt von Tomas Menzel
+
+Onlinevorschau und Verwendung hier: https://klickklacktock.github.io/3D-Fensterbank-Genarator-STL/
